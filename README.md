@@ -1,8 +1,6 @@
 # roadcraft-completesave-streamlit
 Forked from Roadcraft completesave editor by NakedDave. 
 
-## No warranty, backup your save folder first, I am not responsible for you losing your progress
-
 you can use it at:
 [url-goes-here](https://placeholder.tld)
 
