@@ -8,7 +8,7 @@ to run locally, if you don't want to upload your save file:
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install streamlit
-streamlit run rcsaveedit_streamlit.py
+streamlit run roadcraft_streamlit.py
 ```
 
 ## how to use it:
