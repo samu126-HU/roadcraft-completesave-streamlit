@@ -1,10 +1,9 @@
 # roadcraft-completesave-streamlit
 Forked from Roadcraft completesave editor by NakedDave. 
 
-you can use it at:
-[url-goes-here](https://placeholder.tld)
+App is available on [Streamlit community cloud](https://roadcraft-save-edit.streamlit.app/)
 
-to run locally: 
+to run locally, if you don't want to upload your save file: 
 ```
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
