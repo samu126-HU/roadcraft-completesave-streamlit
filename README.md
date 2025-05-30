@@ -15,12 +15,13 @@ An online tool for editing your roadcraft save. Forked from Roadcraft completesa
 * Update company name
 
 ## how to use it:
-* [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://roadcraft-save-edit.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://roadcraft-save-edit.streamlit.app/)
 * BACKUP YOUR SAVE BEFORE STARTING
 * Upload your CompleteSave file
 * Edit as desired
 * Download updated file and save it back to your directory
 
+## run local:
 to run locally, if you don't want to upload your save file: 
 ```
 python3 -m venv venv
