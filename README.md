@@ -13,6 +13,7 @@ An online tool for editing your roadcraft save. Forked from Roadcraft completesa
 * Unlock all maps
 * Unlock all trucks
 * Update company name
+* Remove rusty trucks from garage
 
 ## how to use it:
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://roadcraft-save-edit.streamlit.app/)
