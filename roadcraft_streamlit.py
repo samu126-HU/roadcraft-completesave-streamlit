@@ -23,6 +23,94 @@ ALL_LEVELS_LIST = [
     "rb_map_10_geothermal"
 ]
 
+# List of all trucks to unlock
+ALL_TRUCKS_LIST = [
+      "kronenwerk_l34_dozer_old",
+      "kronenwerk_l34_dozer_res",
+      "baikal_5916_crane_res",
+      "baikal_5916_crane_old",
+      "mule_t1_cargo_old",
+      "mule_t1_cargo_res",
+      "baikal_65206_heavy_dumptruck_res",
+      "baikal_65206_heavy_dumptruck_old",
+      "mule_t1_crane_cargo_res",
+      "zikz_612c_heavy_crane_res",
+      "zikz_612c_heavy_crane_old",
+      "azov_4317dl_cargo_res",
+      "wayfarer_st7050_cargo_main",
+      "kronenwerk_l34_cargo_dozer_res",
+      "vostok_tk53krot_cable_layer_res",
+      "vostok_tk53krot_cable_layer_old",
+      "mtk_100m_stump_mulcher_old",
+      "mtk_100m_stump_mulcher_res",
+      "greenway_740cross_cargo_new",
+      "kronenwerk_l34_wood_grabber_res",
+      "kronenwerk_l34_forwarder_res",
+      "epec_tc305_heavy_crane_new",
+      "zikz_605e_heavy_transporter_res",
+      "base_tayga_6455b_dumptruck_res",
+      "base_baikal_65206_heavy_dumptruck_old",
+      "tayga_6455b_dumptruck_res",
+      "mtk_proseka200_cargo_res",
+      "tuz_119lynx_scout_old",
+      "base_mtk_100m_stump_mulcher_old",
+      "aramatsu_crayfish_wood_grapple_new",
+      "base_voron_3327_cargo_old",
+      "base_tayga_6455b_dumptruck_old",
+      "base_ds_135bunker_paver_res",
+      "epec_lt200_crane_cargo_new",
+      "mtk_proseka200_forwarder_old",
+      "base_khan_lo_strannik_mob_old",
+      "vostok_atm53pioneer_dozer_old",
+      "mtk_proseka200_forwarder_res",
+      "vostok_atm53pioneer_dozer_res",
+      "base_baikal_5916_crane_old",
+      "tuz_303karelian_scout_res",
+      "epec_hwc945_heavy_crane_new",
+      "arling_120special_paver_new",
+      "base_kronenwerk_l34_dozer_old",
+      "mtk_md76_harvester_old",
+      "ds_135bunker_paver_res",
+      "don_72malamute_scout_new",
+      "mtk_md76_harvester_res",
+      "base_ds_55katok_roller_res",
+      "arling_750r_roller_new",
+      "base_vostok_atm53pioneer_dozer_res",
+      "mtk_md76_wood_grapple_res",
+      "base_zikz_612c_heavy_crane_old",
+      "aramatsu_crayfish_harvester_new",
+      "warden_kochevnik_mob_new",
+      "epec_lt200_dumptruck_new",
+      "base_tuz_119lynx_scout_old",
+      "base_don_72malamute_scout_new",
+      "base_voron_3327_cargo_res",
+      "base_tuz_303karelian_scout_old",
+      "base_ds_55katok_roller_old",
+      "ds_55katok_roller_res",
+      "base_epec_lt200_dumptruck_new",
+      "tuz_119lynx_scout_res",
+      "base_arling_120special_paver_new",
+      "base_mtk_proseka200_forwarder_old",
+      "base_ds_135bunker_paver_old",
+      "base_zikz_605e_mobile_scalper_res",
+      "vostok_etv89_crane_new",
+      "voron_3327_cargo_res",
+      "epec_tc305_heavy_crane_grabber_new",
+      "base_mtk_md76_wood_grapple_res",
+      "greenway_740cross_forwarder_new",
+      "tuz_303karelian_scout_old",
+      "step_pike_light_transporter_res",
+      "zikz_605e_mobile_scalper_res",
+      "base_arling_750r_roller_new",
+      "base_mtk_md76_harvester_old",
+      "base_epec_hwc945_heavy_crane_new",
+      "base_zikz_605e_heavy_transporter_old",
+      "aramatsu_kite3_stump_mulcher_new",
+      "base_vostok_atm53pioneer_dozer_old",
+      "base_vostok_tk53krot_cable_layer_old",
+      "base_step_pike_light_transporter_old",
+      "base_mule_t1_cargo_old"
+]
 # --- Utility Functions ---
 def compute_md5(data):
     """Compute the MD5 hash of the given data."""
@@ -163,6 +251,8 @@ if 'initial_values' not in st.session_state:
     st.session_state.initial_values = {}
 if 'initial_unlocked_levels_checkbox_state' not in st.session_state:
     st.session_state.initial_unlocked_levels_checkbox_state = False
+if 'initial_unlocked_trucks_checkbox_state' not in st.session_state:
+    st.session_state.initial_unlocked_trucks_checkbox_state = False
 
 # --- File Loading Logic ---
 # Define a function to load and initialize session state, to avoid repetition
@@ -179,6 +269,7 @@ def load_and_init_session_state(file_content):
             st.session_state.initial_values = {
                 'xp': json_data.get('SslValue', {}).get('xp', 0),
                 'money': json_data.get('SslValue', {}).get('money', 0),
+                'companyName': json_data.get('SslValue', {}).get('companyName', ""), # Added companyName
                 'recovery_coins': json_data.get('SslValue', {}).get('recoveryCoins', {}).get(next(iter(json_data.get('SslValue', {}).get('recoveryCoins', {})), ''), 0),
                 'logs_4_idx': 0,
                 'steel_beams_5_idx': 0,
@@ -199,6 +290,10 @@ def load_and_init_session_state(file_content):
             # --- Set initial state of unlock_levels checkbox ---
             current_unlocked_levels = json_data.get('SslValue', {}).get('unlockedLevels', [])
             st.session_state.initial_unlocked_levels_checkbox_state = all(level in current_unlocked_levels for level in ALL_LEVELS_LIST)
+
+            # --- Set initial state of unlock_trucks checkbox ---
+            current_unlocked_trucks = json_data.get('SslValue', {}).get('newUnlockedTrucks', [])
+            st.session_state.initial_unlocked_trucks_checkbox_state = all(truck in current_unlocked_trucks for truck in ALL_TRUCKS_LIST)
 
             st.success("File loaded successfully! Ready for editing.")
             st.rerun()
@@ -295,11 +390,37 @@ if st.session_state.json_data:
 
         return new_value # Only return the value, as rendering is handled internally
     
+    # Helper for status indicator and string input
+    def create_string_input_with_status(label, widget_key, initial_value_key, parent_column):
+        current_value_from_json = st.session_state.json_data.get('SslValue', {}).get(initial_value_key, "")
+
+        input_sub_col, status_sub_col = parent_column.columns([0.85, 0.15])
+
+        with input_sub_col:
+            new_value = st.text_input(
+                label=label,
+                value=current_value_from_json,
+                key=widget_key,
+                help=f"Original: {st.session_state.initial_values.get(initial_value_key, 'N/A')}"
+            )
+
+        with status_sub_col:
+            is_modified = (new_value != st.session_state.initial_values.get(initial_value_key, ""))
+            color = "red" if is_modified else "green"
+            status_icon = f"<span style='color: {color}; font-size: 1.5em;'>&#x25CF;</span>"
+            st.markdown(f"<div style='margin-top: 25px;'>{status_icon}</div>", unsafe_allow_html=True)
+        
+        return new_value
 
     # --- XP and Cash ---
     col1, col2 = st.columns(2) # Parent columns for XP and Cash sections
     xp_value = create_number_input_with_status("Experience Points (max = 605990)", "xp_input", "xp", parent_column=col1)
     cash_value = create_number_input_with_status("Cash", "money_input", "money", parent_column=col2)
+
+    # --- Company Name ---
+    company_name_col = st.columns(1)[0] # Single column for company name
+    company_name_value = create_string_input_with_status("Company Name", "companyName_input", "companyName", parent_column=company_name_col)
+
 
     # --- Unlock All Levels Checkbox ---
     unlock_levels = st.checkbox(
@@ -308,6 +429,15 @@ if st.session_state.json_data:
         key="unlock_all_levels_checkbox",
         help="Checking this will unlock all known levels in the game. If unchecked, no changes will be made to your available levels."
     )
+
+    # --- Unlock All Trucks Checkbox ---
+    unlock_trucks = st.checkbox(
+        "Unlock All Trucks",
+        value=st.session_state.initial_unlocked_trucks_checkbox_state, # Set default state based on loaded file
+        key="unlock_all_trucks_checkbox",
+        help="Checking this will unlock all known trucks in the game. If unchecked, no changes will be made to your available trucks."
+    )
+
 
     st.subheader("Global Resources (applies to all maps)")
 
@@ -364,6 +494,11 @@ if st.session_state.json_data:
 
             if cash_value != st.session_state.initial_values['money']:
                 ssl_value_to_modify['money'] = cash_value
+            
+            # Apply Company Name change
+            if company_name_value != st.session_state.initial_values['companyName']:
+                ssl_value_to_modify['companyName'] = company_name_value
+
 
             if recovery_coins_value != st.session_state.initial_values['recovery_coins']:
                 if 'recoveryCoins' in ssl_value_to_modify:
@@ -382,6 +517,12 @@ if st.session_state.json_data:
             # ELSE (if not unlock_levels AND not initial_unlocked_levels_checkbox_state):
             # The user did nothing, and it wasn't fully unlocked initially.
             # So, the 'unlockedLevels' entry remains exactly as it was loaded.
+
+            # --- Apply Unlock All Trucks change (updated logic) ---
+            if unlock_trucks: # If checkbox is currently checked
+                ssl_value_to_modify["newUnlockedTrucks"] = ALL_TRUCKS_LIST
+                ssl_value_to_modify['lockedTrucks'] = [] # Set it to an empty list
+            
             
             # Resources (Logs, Steel Beams, Concrete, Steel Pipes)
             resource_updates_map = { # Maps initial_key to (current_value, index)
