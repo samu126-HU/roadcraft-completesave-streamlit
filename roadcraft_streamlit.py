@@ -73,8 +73,8 @@ ALL_TRUCKS_LIST = [
       "ds_135bunker_paver_res",
       "don_72malamute_scout_new",
       "mtk_md76_harvester_res",
-      "base_ds_55katok_roller_res",
       "arling_750r_roller_new",
+      "base_mtk_md76_harvester_old",
       "base_vostok_atm53pioneer_dozer_res",
       "mtk_md76_wood_grapple_res",
       "base_zikz_612c_heavy_crane_old",
@@ -253,6 +253,11 @@ if 'initial_unlocked_levels_checkbox_state' not in st.session_state:
     st.session_state.initial_unlocked_levels_checkbox_state = False
 if 'initial_unlocked_trucks_checkbox_state' not in st.session_state:
     st.session_state.initial_unlocked_trucks_checkbox_state = False
+if 'initial_lift_fog_checkbox_state' not in st.session_state: # New state for fog of war
+    st.session_state.initial_lift_fog_checkbox_state = False
+if 'initial_remove_rusty_trucks_checkbox_state' not in st.session_state: # New state for removing rusty trucks
+    st.session_state.initial_remove_rusty_trucks_checkbox_state = False
+
 
 # --- File Loading Logic ---
 # Define a function to load and initialize session state, to avoid repetition
@@ -269,7 +274,7 @@ def load_and_init_session_state(file_content):
             st.session_state.initial_values = {
                 'xp': json_data.get('SslValue', {}).get('xp', 0),
                 'money': json_data.get('SslValue', {}).get('money', 0),
-                'companyName': json_data.get('SslValue', {}).get('companyName', ""), # Added companyName
+                'companyName': json_data.get('SslValue', {}).get('companyName', ""), 
                 'recovery_coins': json_data.get('SslValue', {}).get('recoveryCoins', {}).get(next(iter(json_data.get('SslValue', {}).get('recoveryCoins', {})), ''), 0),
                 'logs_4_idx': 0,
                 'steel_beams_5_idx': 0,
@@ -295,11 +300,31 @@ def load_and_init_session_state(file_content):
             current_unlocked_trucks = json_data.get('SslValue', {}).get('newUnlockedTrucks', [])
             st.session_state.initial_unlocked_trucks_checkbox_state = all(truck in current_unlocked_trucks for truck in ALL_TRUCKS_LIST)
 
+            # --- Set initial state of lift_fog checkbox ---
+            current_fog_progress = json_data.get('SslValue', {}).get('fogOfWarProgress', {})
+            # Assume fog is lifted if all maps present have 100% progress
+            st.session_state.initial_lift_fog_checkbox_state = all(progress == 100.0 for progress in current_fog_progress.values()) and bool(current_fog_progress)
+
+            # --- Set initial state of remove_rusty_trucks checkbox ---
+            # Check if any "old" trucks exist in storedTrucks, excluding "khan_lo_strannik_mob_old"
+            current_stored_trucks = json_data.get('SslValue', {}).get('storedTrucks', {})
+            has_rusty_trucks_to_remove = False
+            for truck_name, truck_data in current_stored_trucks.items():
+                if truck_name.endswith("_old") and truck_name != "khan_lo_strannik_mob_old" and len(truck_data) > 0:
+                    has_rusty_trucks_to_remove = True
+                    break
+            st.session_state.initial_remove_rusty_trucks_checkbox_state = not has_rusty_trucks_to_remove # Checked if no removable rusty trucks are present
+
             st.success("File loaded successfully! Ready for editing.")
             st.rerun()
         except json.JSONDecodeError as e:
             st.error(f"Error decoding JSON from file: {e}. File might be corrupted.")
             # Reset session state on error
+            st.session_state.json_data = None
+            st.session_state.original_file_content_bytes = None
+            st.session_state.initial_values = {}
+        except Exception as e:
+            st.error(f"An unexpected error occurred during file loading: {e}")
             st.session_state.json_data = None
             st.session_state.original_file_content_bytes = None
             st.session_state.initial_values = {}
@@ -438,6 +463,23 @@ if st.session_state.json_data:
         help="Checking this will unlock all known trucks in the game. If unchecked, no changes will be made to your available trucks."
     )
 
+    # --- Remove Rusty Trucks Checkbox ---
+    remove_rusty_trucks = st.checkbox(
+        "Remove Rusty Trucks from Garage",
+        value=st.session_state.initial_remove_rusty_trucks_checkbox_state, # Set default state based on loaded file
+        key="remove_rusty_trucks_checkbox",
+        help="Checking this will set the inventory count of all trucks ending in '_old' to zero, EXCEPT 'khan_lo_strannik_mob_old'. Trucks on maps will remain."
+    )
+
+
+    # # --- Lift all fog checkbox ---
+    # lift_fog = st.checkbox(
+    #     "Lift All Fog of War",
+    #     value=st.session_state.initial_lift_fog_checkbox_state, # Set default state based on loaded file
+    #     key="lift_fog_checkbox",
+    #     help="Checking this will reveal all fog of war on all maps to 100%."
+    # )
+
 
     st.subheader("Global Resources (applies to all maps)")
 
@@ -459,10 +501,6 @@ if st.session_state.json_data:
         color = "red" if is_modified else "green"
         status_icon = f"<span style='color: {color}; font-size: 1.5em;'>&#x25CF;</span>"
         st.markdown(f"<div style='margin-top: 25px;'>{status_icon}</div>", unsafe_allow_html=True)
-
-    # # --- Recovery Coins ---
-    # rc_col_main = st.columns(1)[0] # Create a single column for RC, its own sub-columns will be inside
-    # recovery_coins_value = create_number_input_with_status("Recovery Coins (Gas)", "recoveryCoins_input", "recovery_coins", parent_column=rc_col_main)
 
     
     # --- Logs, Steel Beams ---
@@ -500,12 +538,13 @@ if st.session_state.json_data:
                 ssl_value_to_modify['companyName'] = company_name_value
 
 
+            # --- Apply Recovery Coins change using ALL_LEVELS_LIST ---
             if recovery_coins_value != st.session_state.initial_values['recovery_coins']:
-                if 'recoveryCoins' in ssl_value_to_modify:
-                    for map_name in ssl_value_to_modify['recoveryCoins']:
-                        ssl_value_to_modify['recoveryCoins'][map_name] = recovery_coins_value
-                else: # If 'recoveryCoins' didn't exist, create it as an empty dict (cautiously)
+                if 'recoveryCoins' not in ssl_value_to_modify:
                     ssl_value_to_modify['recoveryCoins'] = {}
+                for map_name in ALL_LEVELS_LIST: # Iterate through all known levels
+                    ssl_value_to_modify['recoveryCoins'][map_name] = recovery_coins_value
+
 
              # --- Apply Unlock All Levels change (updated logic) ---
             if unlock_levels: # If checkbox is currently checked
@@ -523,8 +562,21 @@ if st.session_state.json_data:
                 ssl_value_to_modify["newUnlockedTrucks"] = ALL_TRUCKS_LIST
                 ssl_value_to_modify['lockedTrucks'] = [] # Set it to an empty list
             
-            
-            # Resources (Logs, Steel Beams, Concrete, Steel Pipes)
+            # --- Apply Remove Rusty Trucks change ---
+            if remove_rusty_trucks:
+                if 'storedTrucks' in ssl_value_to_modify:
+                    for truck_name in list(ssl_value_to_modify['storedTrucks'].keys()): # Iterate over a copy to allow modification
+                        if truck_name.endswith("_old") and truck_name != "khan_lo_strannik_mob_old": # Added exception
+                            ssl_value_to_modify['storedTrucks'][truck_name] = [] # Set to empty list
+
+            # # --- Apply Lift All Fog of War change ---
+            # if lift_fog:
+            #     if 'fogOfWarProgress' not in ssl_value_to_modify:
+            #         ssl_value_to_modify['fogOfWarProgress'] = {}
+            #     for map_name in ALL_LEVELS_LIST: # Use ALL_LEVELS_LIST as a reference for map names
+            #         ssl_value_to_modify['fogOfWarProgress'][map_name] = 100.0
+
+            # --- Resources (Logs, Steel Beams, Concrete, Steel Pipes) using ALL_LEVELS_LIST ---
             resource_updates_map = { # Maps initial_key to (current_value, index)
                 'logs_4_idx': (logs_value, 4),
                 'steel_beams_5_idx': (steel_beams_value, 5),
@@ -532,19 +584,21 @@ if st.session_state.json_data:
                 'steel_pipes_7_idx': (steel_pipes_value, 7)
             }
 
-            if 'fobsResources' in ssl_value_to_modify:
-                for map_name, map_data in ssl_value_to_modify['fobsResources'].items():
-                    if 'resources' in map_data and isinstance(map_data['resources'], list):
-                        resources = map_data['resources']
-                        for initial_key, (current_val, idx) in resource_updates_map.items():
-                            if current_val != st.session_state.initial_values[initial_key]:
-                                # Ensure list is long enough, extend with zeros if needed
-                                while len(resources) <= idx:
-                                    resources.append(0)
-                                resources[idx] = current_val
-            # else: # If 'fobsResources' didn't exist, create it if resources were modified
-            #     # This logic would be more complex as it would need to add default map entries
-            #     # For simplicity, we assume 'fobsResources' exists if any resources are present.
+            if 'fobsResources' not in ssl_value_to_modify:
+                ssl_value_to_modify['fobsResources'] = {}
+
+            for map_name in ALL_LEVELS_LIST: # Iterate through all known levels
+                # Ensure the map entry exists in fobsResources
+                if map_name not in ssl_value_to_modify['fobsResources']:
+                    ssl_value_to_modify['fobsResources'][map_name] = {"resources": [0]*8} # Initialize with 8 zeros if not present
+
+                resources = ssl_value_to_modify['fobsResources'][map_name]['resources']
+                for initial_key, (current_val, idx) in resource_updates_map.items():
+                    if current_val != st.session_state.initial_values[initial_key]:
+                        # Ensure list is long enough, extend with zeros if needed
+                        while len(resources) <= idx:
+                            resources.append(0)
+                        resources[idx] = current_val
 
             # Convert modified JSON back to bytes
             decompressed_data_edited = json.dumps(
