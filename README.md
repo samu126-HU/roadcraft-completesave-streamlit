@@ -1,8 +1,6 @@
 # roadcraft-completesave-streamlit
 An online tool for editing your roadcraft save. Forked from Roadcraft completesave editor by NakedDave. 
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://roadcraft-save-edit.streamlit.app/)
-
 ## what it does:
 * Add/Edit XP
 * Add/Edit Cash
@@ -17,6 +15,7 @@ An online tool for editing your roadcraft save. Forked from Roadcraft completesa
 * Update company name
 
 ## how to use it:
+* [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://roadcraft-save-edit.streamlit.app/)
 * BACKUP YOUR SAVE BEFORE STARTING
 * Upload your CompleteSave file
 * Edit as desired
