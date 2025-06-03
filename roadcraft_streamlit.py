@@ -23,8 +23,9 @@ ALL_LEVELS_LIST = [
     "rb_map_10_geothermal"
 ]
 
-# List of all trucks to unlock
+# List of all trucks to unlock 
 ALL_TRUCKS_LIST = [
+      "aramatsu_bowhead_heavy_dumptruck_new",
       "kronenwerk_l34_dozer_old",
       "kronenwerk_l34_dozer_res",
       "baikal_5916_crane_res",
