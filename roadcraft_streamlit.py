@@ -461,7 +461,7 @@ if st.session_state.json_data:
         "Unlock All Trucks",
         value=st.session_state.initial_unlocked_trucks_checkbox_state, # Set default state based on loaded file
         key="unlock_all_trucks_checkbox",
-        help="Checking this will unlock all known trucks in the game. If unchecked, no changes will be made to your available trucks."
+        help="Checking this will unlock all known trucks in the game. If unchecked, no changes will be made to your available trucks. Aramatsu Bowhead added."
     )
 
     # --- Remove Rusty Trucks Checkbox ---
