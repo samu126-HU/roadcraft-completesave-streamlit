@@ -2,6 +2,7 @@ import zlib
 import hashlib
 import json
 import streamlit as st
+from valid_values import ALL_LEVELS_LIST, ALL_TRUCKS_LIST
 import os # For checking default file path existence
 
 # --- Constants ---
@@ -9,109 +10,6 @@ WBITS_VALUE = -15
 HEADER_LENGTH = 53
 ZLIB_HEADER = b'\x78\x9c'
 
-# List of all levels to unlock
-ALL_LEVELS_LIST = [
-    "rb_map_01_storm_preparation",
-    "rb_map_07_rail_failure",
-    "rb_map_08_contamination",
-    "rb_map_02_storm_aftermath",
-    "rb_map_03_incommunicado",
-    "rb_map_04_salt_mines",
-    "rb_map_05_dam_break",
-    "rb_map_06_sinkholes",
-    "rb_map_09_sand_storm",
-    "rb_map_10_geothermal"
-]
-
-# List of all trucks to unlock 
-ALL_TRUCKS_LIST = [
-      "aramatsu_bowhead_heavy_dumptruck_new",
-      "kronenwerk_l34_dozer_old",
-      "kronenwerk_l34_dozer_res",
-      "baikal_5916_crane_res",
-      "baikal_5916_crane_old",
-      "mule_t1_cargo_old",
-      "mule_t1_cargo_res",
-      "baikal_65206_heavy_dumptruck_res",
-      "baikal_65206_heavy_dumptruck_old",
-      "mule_t1_crane_cargo_res",
-      "zikz_612c_heavy_crane_res",
-      "zikz_612c_heavy_crane_old",
-      "azov_4317dl_cargo_res",
-      "wayfarer_st7050_cargo_main",
-      "kronenwerk_l34_cargo_dozer_res",
-      "vostok_tk53krot_cable_layer_res",
-      "vostok_tk53krot_cable_layer_old",
-      "mtk_100m_stump_mulcher_old",
-      "mtk_100m_stump_mulcher_res",
-      "greenway_740cross_cargo_new",
-      "kronenwerk_l34_wood_grabber_res",
-      "kronenwerk_l34_forwarder_res",
-      "epec_tc305_heavy_crane_new",
-      "zikz_605e_heavy_transporter_res",
-      "base_tayga_6455b_dumptruck_res",
-      "base_baikal_65206_heavy_dumptruck_old",
-      "tayga_6455b_dumptruck_res",
-      "mtk_proseka200_cargo_res",
-      "tuz_119lynx_scout_old",
-      "base_mtk_100m_stump_mulcher_old",
-      "aramatsu_crayfish_wood_grapple_new",
-      "base_voron_3327_cargo_old",
-      "base_tayga_6455b_dumptruck_old",
-      "base_ds_135bunker_paver_res",
-      "epec_lt200_crane_cargo_new",
-      "mtk_proseka200_forwarder_old",
-      "base_khan_lo_strannik_mob_old",
-      "vostok_atm53pioneer_dozer_old",
-      "mtk_proseka200_forwarder_res",
-      "vostok_atm53pioneer_dozer_res",
-      "base_baikal_5916_crane_old",
-      "tuz_303karelian_scout_res",
-      "epec_hwc945_heavy_crane_new",
-      "arling_120special_paver_new",
-      "base_kronenwerk_l34_dozer_old",
-      "mtk_md76_harvester_old",
-      "ds_135bunker_paver_res",
-      "don_72malamute_scout_new",
-      "mtk_md76_harvester_res",
-      "arling_750r_roller_new",
-      "base_mtk_md76_harvester_old",
-      "base_vostok_atm53pioneer_dozer_res",
-      "mtk_md76_wood_grapple_res",
-      "base_zikz_612c_heavy_crane_old",
-      "aramatsu_crayfish_harvester_new",
-      "warden_kochevnik_mob_new",
-      "epec_lt200_dumptruck_new",
-      "base_tuz_119lynx_scout_old",
-      "base_don_72malamute_scout_new",
-      "base_voron_3327_cargo_res",
-      "base_tuz_303karelian_scout_old",
-      "base_ds_55katok_roller_old",
-      "ds_55katok_roller_res",
-      "base_epec_lt200_dumptruck_new",
-      "tuz_119lynx_scout_res",
-      "base_arling_120special_paver_new",
-      "base_mtk_proseka200_forwarder_old",
-      "base_ds_135bunker_paver_old",
-      "base_zikz_605e_mobile_scalper_res",
-      "vostok_etv89_crane_new",
-      "voron_3327_cargo_res",
-      "epec_tc305_heavy_crane_grabber_new",
-      "base_mtk_md76_wood_grapple_res",
-      "greenway_740cross_forwarder_new",
-      "tuz_303karelian_scout_old",
-      "step_pike_light_transporter_res",
-      "zikz_605e_mobile_scalper_res",
-      "base_arling_750r_roller_new",
-      "base_mtk_md76_harvester_old",
-      "base_epec_hwc945_heavy_crane_new",
-      "base_zikz_605e_heavy_transporter_old",
-      "aramatsu_kite3_stump_mulcher_new",
-      "base_vostok_atm53pioneer_dozer_old",
-      "base_vostok_tk53krot_cable_layer_old",
-      "base_step_pike_light_transporter_old",
-      "base_mule_t1_cargo_old"
-]
 # --- Utility Functions ---
 def compute_md5(data):
     """Compute the MD5 hash of the given data."""
@@ -226,22 +124,26 @@ st.set_page_config(layout="centered", page_title="Roadcraft Save Editor", initia
 
 st.title("Roadcraft Save Editor")
 with st.sidebar:
-    st.markdown("Upload and edit your CompleteSave file, usually found at: `%AppData%/Local/Saber/RoadCraftGame/storage/steam/user/<YOUR_STEAM_USER_ID>/Main/save`")
-    st.markdown("The default steam deck location is: `/home/deck/.local/share/Steam/steamapps/compatdata/2104890/pfx/drive_c/users/steamuser/AppData/Local/Saber/RoadCraftGame/storage/steam/user/<YOUR_STEAM_USER_ID>/Main/save`")
+    st.markdown("This app is **unofficial, unsupported,** and if your save breaks I have no way of helping you. ***ALWAYS BACK UP YOUR SAVES FIRST!***")
+    st.markdown("Save files are usually found at:")
+    st.markdown("***1. STEAM*** `%AppData%/Local/Saber/RoadCraftGame/storage/steam/user/<YOUR_STEAM_USER_ID>/Main/save`")
+    st.markdown("***2. STEAM DECK*** `/home/deck/.local/share/Steam/steamapps/compatdata/2104890/pfx/drive_c/users/steamuser/AppData/Local/Saber/RoadCraftGame/storage/steam/user/<YOUR_STEAM_USER_ID>/Main/save`")
     st.markdown("---")
-    st.markdown("The source code for this app is available on [github](https://github.com/cgpavlakos/roadcraft-completesave-streamlit) if you prefer to run locally.")
-    st.markdown("---") # Add a horizontal rule for visual separation
-    st.markdown("If you find this useful, consider a small donation to my beer fund!")
-    st.markdown(
-        '<a href="https://coindrop.to/cgpavlakos" target="_blank">'
-        '<img src="https://coindrop.to/embed-button.png" '
-        'style="border-radius: 10px; height: 57px !important; width: 229px !important;" '
-        'alt="Coindrop.to me">'
-        '</a>',
-        unsafe_allow_html=True
-    )
+    st.markdown("The source code for this app is available on [github](https://github.com/samu126-HU/roadcraft-completesave-streamlit) if you prefer to run locally.")
     st.markdown("---")
-    st.markdown("Thanks to NakedDevA for his [Roadcraft completesave editor](https://github.com/NakedDevA/roadcraft-completesave) which this is forked from.")
+    st.markdown("Thanks to cgpavlakos for his [fork](https://github.com/cgpavlakos/roadcraft-completesave-streamlit) of NakedDevA's [Roadcraft completesave editor](https://github.com/NakedDevA/roadcraft-completesave) (the original save editor author).")
+    st.markdown("This app is a version of that editor, with some additional features.")
+    st.markdown("---")
+
+
+# --- Sidebar Navigation Menu ---
+page = st.sidebar.selectbox(
+    "Navigation",
+    ["Save Editor", "Troubleshooting Guide"]
+)
+
+if page == "Troubleshooting Guide":
+    st.switch_page("pages/troubleshooting_guide.py")
 
 # Initialize session state variables if they don't exist
 if 'json_data' not in st.session_state:
@@ -337,7 +239,7 @@ def load_and_init_session_state(file_content):
 
 
 # --- File Uploader and Default Path Check ---
-st.warning("BACK UP YOUR SAVES FIRST!!! This tool is unofficial, unsupported, and I have no way to help you if something breaks.")
+st.warning("***BACK UP YOUR SAVES FIRST!*** This tool is **unofficial, unsupported.** If it's too late you can check the sidebar for troubleshooting tips but there's no guarantee it will work. If your save breaks I have no way of helping you.")
 st.markdown("---")
 uploaded_file = st.file_uploader(
     "Upload your CompleteSave file:",
@@ -464,6 +366,16 @@ if st.session_state.json_data:
         help="Checking this will unlock all known trucks in the game. If unchecked, no changes will be made to your available trucks. Aramatsu Bowhead added."
     )
 
+
+
+    # --- Remove Rusty Trucks Checkbox ---
+    remove_rusty_trucks = st.checkbox(
+        "Remove Rusty Trucks from Garage",
+        value=st.session_state.initial_remove_rusty_trucks_checkbox_state, # Set default state based on loaded file
+        key="remove_rusty_trucks_checkbox",
+        help="Checking this will set the inventory count of all trucks ending in '_old' to zero, EXCEPT 'khan_lo_strannik_mob_old'. Trucks on maps will remain."
+    )
+
     # --- Per-Truck Unlock Dropdown ---
     st.markdown("**Select Unlocked Trucks:**")
     current_unlocked_trucks = st.session_state.json_data.get('SslValue', {}).get('newUnlockedTrucks', [])
@@ -486,15 +398,6 @@ if st.session_state.json_data:
     )
     # For compatibility with the rest of the code, create a dict of truck:bool
     truck_checkbox_states = {truck: (truck in selected_trucks) for truck in unique_trucks}
-
-    # --- Remove Rusty Trucks Checkbox ---
-    remove_rusty_trucks = st.checkbox(
-        "Remove Rusty Trucks from Garage",
-        value=st.session_state.initial_remove_rusty_trucks_checkbox_state, # Set default state based on loaded file
-        key="remove_rusty_trucks_checkbox",
-        help="Checking this will set the inventory count of all trucks ending in '_old' to zero, EXCEPT 'khan_lo_strannik_mob_old'. Trucks on maps will remain."
-    )
-
 
     # # --- Lift all fog checkbox ---
     # lift_fog = st.checkbox(
@@ -650,3 +553,25 @@ if st.session_state.json_data:
             st.json(st.session_state.json_data)
         else:
             st.info("Upload a file to view raw JSON.")
+
+    # Show raw JSON as editable text
+    if st.checkbox("Show Raw JSON as Text (editable)", value=False, help="Edit the full JSON content directly."):
+        if st.session_state.json_data:
+            raw_json_str = json.dumps(st.session_state.json_data, indent=3, ensure_ascii=False)
+            edited_json_str = st.text_area(
+                "Edit Raw JSON",
+                value=raw_json_str,
+                height=400,
+                key="editable_json_text_area",
+                help="Edit the JSON directly. Be careful: invalid JSON will cause errors.",
+                label_visibility="visible"
+            )
+            if st.button("Apply Edited JSON", key="apply_edited_json_button"):
+                try:
+                    new_json = json.loads(edited_json_str)
+                    st.session_state.json_data = new_json
+                    st.success("JSON applied successfully.")
+                except Exception as e:
+                    st.error(f"Invalid JSON: {e}")
+        else:
+            st.info("Upload a file to view and edit raw JSON.")
