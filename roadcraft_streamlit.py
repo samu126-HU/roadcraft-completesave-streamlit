@@ -1,138 +1,16 @@
-import zlib
-import hashlib
 import json
 import streamlit as st
 from valid_values import ALL_LEVELS_LIST, ALL_TRUCKS_LIST
+from utility import encode_file
+from file_loading import load_and_init_session_state
 import os # For checking default file path existence
 
-# --- Constants ---
-WBITS_VALUE = -15
-HEADER_LENGTH = 53
-ZLIB_HEADER = b'\x78\x9c'
-
-# --- Utility Functions ---
-def compute_md5(data):
-    """Compute the MD5 hash of the given data."""
-    md5_hash = hashlib.md5(data).hexdigest()
-    return md5_hash
-
-def try_decompress_zlib_block(data, start_offset=0):
-    """Try different decompression methods on the data starting at offset."""
-    result = {}
-    zlib_block = data[start_offset:]
-    uncompressed_size = int.from_bytes(zlib_block[:4], byteorder='little')
-    compressed_size = int.from_bytes(zlib_block[4:8], byteorder='little')
-
-    # Confirm next 2 bytes are zlib header (or expected for raw deflate)
-    # The original WBITS_VALUE = -15 means raw deflate, so there's no zlib header
-    # But it's good to keep the check if the game sometimes uses standard zlib
-    if zlib_block[8:10] == ZLIB_HEADER:
-        st.warning("Warning: Standard zlib header found. Ensure WBITS_VALUE=-15 is correct for raw deflate.")
-    
-    # Decompress from here
-    decompressed = zlib.decompress(zlib_block[10:], wbits=WBITS_VALUE)
-
-    result['uncompressed_size'] = uncompressed_size
-    result['compressed_size'] = compressed_size
-    result['decompressed_bytes'] = decompressed
-    return result
-
-def decode_file(file_content_bytes):
-    """Decode a file by decompressing its zlib blocks and return a single byte array."""
-    if not file_content_bytes:
-        return None, None
-
-    # st.write(f"File size: {len(file_content_bytes)} bytes") # Commented out to avoid cluttering UI
-
-    md5 = compute_md5(file_content_bytes[HEADER_LENGTH:])
-    # st.write(f"Original MD5 hash of compressed data from offset {HEADER_LENGTH}: {md5}")
-
-    offset = HEADER_LENGTH
-    decompressed_data = bytearray()
-
-    try:
-        while offset < len(file_content_bytes):
-            result = try_decompress_zlib_block(file_content_bytes, start_offset=offset)
-            decompressed_data.extend(result['decompressed_bytes'])
-            offset += result['compressed_size'] + 8 # 8 bytes for the 2 int32s
-    except zlib.error as e:
-        st.error(f"Zlib decompression error: {e}. The file might be corrupted or not a valid save file.")
-        return None, None
-    except Exception as e:
-        st.error(f"Error during file decoding: {e}")
-        return None, None
-    
-    # st.write(f"Total decompressed data size: {len(decompressed_data)} bytes")
-    return file_content_bytes, decompressed_data
-
-def encode_file(original_file_content, decompressed_data_edited):
-    """Encode a file by compressing the decompressed data into chunks."""
-    try:
-        st.info("Rebuilding the file with the new compressed data...")
-
-        new_zlib_data = b''
-        chunk_size = 1024**2 # 1 MB (1MB chunks for compression)
-        offset = 0
-
-        while offset < len(decompressed_data_edited):
-            chunk = decompressed_data_edited[offset:offset + chunk_size]
-            offset += chunk_size
-
-            new_block_uncompressed_size_bytes = len(chunk).to_bytes(4, 'little')
-            
-            # Using WBITS_VALUE=-15 for raw deflate stream, as per original code's design
-            new_compressed_data = zlib.compress(chunk, level=-1, wbits=WBITS_VALUE) 
-            
-            adler32 = zlib.adler32(chunk)
-            adler32_bytes = adler32.to_bytes(4, 'big')
-
-            new_block_compressed_size = len(new_compressed_data) + 6
-            new_block_compressed_size_bytes = new_block_compressed_size.to_bytes(4, 'little')
-
-            # Append the new block to the new data
-            new_zlib_data += new_block_uncompressed_size_bytes + new_block_compressed_size_bytes + ZLIB_HEADER + new_compressed_data + adler32_bytes
-
-        # Rebuild header components
-        original_filetype = original_file_content[:4]
-        zero_bytes = b'\x00\x00\x00\x00'
-        three_byte = b'\x03' # Constant byte from original header logic
-        new_total_compressed_size_bytes = len(new_zlib_data).to_bytes(4, 'little')
-        new_total_uncompressed_size_bytes = len(decompressed_data_edited).to_bytes(4, 'little')
-        new_md5 = compute_md5(new_zlib_data)
-        st.info(f"New MD5 hash of compressed data: {new_md5}")
-        new_md5_bytes = new_md5.encode('utf-8')
-
-        final_data = original_filetype + new_total_compressed_size_bytes + zero_bytes + new_total_uncompressed_size_bytes + zero_bytes + new_md5_bytes + three_byte + new_zlib_data
-
-        # In Streamlit, we offer the file for download directly
-        st.download_button(
-            label="Download CompleteSave",
-            data=final_data,
-            file_name="CompleteSave",
-            mime="application/octet-stream",
-            help="Replace the original file in your save directory. **DID YOU BACK UP YOUR ORIGINAL?**"
-        )
-        st.success("File rebuilt and ready for download!")
-        return True
-    except Exception as e:
-        st.error(f"Error during encoding: {e}. Please check the console/logs.")
-        return False
-
 # --- Streamlit App Layout and Logic ---
-
 st.set_page_config(layout="centered", page_title="Roadcraft Save Editor", initial_sidebar_state="expanded")
 
-st.title("Roadcraft Save Editor")
 with st.sidebar:
-    # --- Sidebar Navigation Menu ---
-    page = st.sidebar.selectbox(
-        "Navigation",
-        ["Save Editor", "Troubleshooting Guide"]
-    )
-
-    if page == "Troubleshooting Guide":
-        st.switch_page("pages/troubleshooting_guide.py")
-    st.markdown("This app is **unofficial, unsupported,** and if your save breaks I have no way of helping you. ***ALWAYS BACK UP YOUR SAVES FIRST!***")
+    st.page_link('roadcraft_streamlit.py', label='Save Editor')
+    st.page_link('pages/troubleshooting_guide.py', label='Troubleshooting Guide')
     st.markdown("Save files are usually found at:")
     st.markdown("***1. STEAM*** `%AppData%/Local/Saber/RoadCraftGame/storage/steam/user/<YOUR_STEAM_USER_ID>/Main/save`")
     st.markdown("***2. STEAM DECK*** `/home/deck/.local/share/Steam/steamapps/compatdata/2104890/pfx/drive_c/users/steamuser/AppData/Local/Saber/RoadCraftGame/storage/steam/user/<YOUR_STEAM_USER_ID>/Main/save`")
@@ -159,85 +37,8 @@ if 'initial_lift_fog_checkbox_state' not in st.session_state: # New state for fo
 if 'initial_remove_rusty_trucks_checkbox_state' not in st.session_state: # New state for removing rusty trucks
     st.session_state.initial_remove_rusty_trucks_checkbox_state = False
 
-
-# --- File Loading Logic ---
-# Define a function to load and initialize session state, to avoid repetition
-def load_and_init_session_state(file_content):
-    original_file_content_bytes, decompressed_data = decode_file(file_content)
-
-    if original_file_content_bytes and decompressed_data:
-        try:
-            json_data = json.loads(decompressed_data.decode('utf-8'))
-            st.session_state.json_data = json_data
-            st.session_state.original_file_content_bytes = original_file_content_bytes
-            
-            # Initialize initial_values for the session
-            st.session_state.initial_values = {
-                'xp': json_data.get('SslValue', {}).get('xp', 0),
-                'money': json_data.get('SslValue', {}).get('money', 0),
-                'companyName': json_data.get('SslValue', {}).get('companyName', ""), 
-                'recovery_coins': json_data.get('SslValue', {}).get('recoveryCoins', {}).get(next(iter(json_data.get('SslValue', {}).get('recoveryCoins', {})), ''), 0),
-                'logs_4_idx': 0,
-                'steel_beams_5_idx': 0,
-                'concrete_6_idx': 0,
-                'steel_pipes_7_idx': 0
-            }
-            # Populate initial_values for resources (using the correct keys)
-            if 'fobsResources' in json_data.get('SslValue', {}):
-                for map_data in json_data['SslValue']['fobsResources'].values():
-                    if 'resources' in map_data and isinstance(map_data['resources'], list):
-                        resources = map_data['resources']
-                        if len(resources) > 4: st.session_state.initial_values['logs_4_idx'] = resources[4]
-                        if len(resources) > 5: st.session_state.initial_values['steel_beams_5_idx'] = resources[5]
-                        if len(resources) > 6: st.session_state.initial_values['concrete_6_idx'] = resources[6]
-                        if len(resources) > 7: st.session_state.initial_values['steel_pipes_7_idx'] = resources[7]
-                        break
-
-            # --- Set initial state of unlock_levels checkbox ---
-            current_unlocked_levels = json_data.get('SslValue', {}).get('unlockedLevels', [])
-            st.session_state.initial_unlocked_levels_checkbox_state = all(level in current_unlocked_levels for level in ALL_LEVELS_LIST)
-
-            # --- Set initial state of unlock_trucks checkbox ---
-            current_unlocked_trucks = json_data.get('SslValue', {}).get('newUnlockedTrucks', [])
-            st.session_state.initial_unlocked_trucks_checkbox_state = all(truck in current_unlocked_trucks for truck in ALL_TRUCKS_LIST)
-
-            # --- Set initial state of lift_fog checkbox ---
-            current_fog_progress = json_data.get('SslValue', {}).get('fogOfWarProgress', {})
-            # Assume fog is lifted if all maps present have 100% progress
-            st.session_state.initial_lift_fog_checkbox_state = all(progress == 100.0 for progress in current_fog_progress.values()) and bool(current_fog_progress)
-
-            # --- Set initial state of remove_rusty_trucks checkbox ---
-            # Check if any "old" trucks exist in storedTrucks, excluding "khan_lo_strannik_mob_old"
-            current_stored_trucks = json_data.get('SslValue', {}).get('storedTrucks', {})
-            has_rusty_trucks_to_remove = False
-            for truck_name, truck_data in current_stored_trucks.items():
-                if truck_name.endswith("_old") and truck_name != "khan_lo_strannik_mob_old" and len(truck_data) > 0:
-                    has_rusty_trucks_to_remove = True
-                    break
-            st.session_state.initial_remove_rusty_trucks_checkbox_state = not has_rusty_trucks_to_remove # Checked if no removable rusty trucks are present
-
-            st.success("File loaded successfully! Ready for editing.")
-            st.rerun()
-        except json.JSONDecodeError as e:
-            st.error(f"Error decoding JSON from file: {e}. File might be corrupted.")
-            # Reset session state on error
-            st.session_state.json_data = None
-            st.session_state.original_file_content_bytes = None
-            st.session_state.initial_values = {}
-        except Exception as e:
-            st.error(f"An unexpected error occurred during file loading: {e}")
-            st.session_state.json_data = None
-            st.session_state.original_file_content_bytes = None
-            st.session_state.initial_values = {}
-    else:
-        st.error("Failed to decode the file. It might not be a valid CompleteSave.")
-        st.session_state.json_data = None
-        st.session_state.original_file_content_bytes = None
-        st.session_state.initial_values = {}
-
-
 # --- File Uploader and Default Path Check ---
-st.warning("***BACK UP YOUR SAVES FIRST!*** This tool is **unofficial, unsupported.** If it's too late you can check the sidebar for troubleshooting tips but there's no guarantee it will work. If your save breaks I have no way of helping you.")
+st.warning("***BACK UP YOUR SAVES FIRST!*** This tool is **unofficial, unsupported.** If it's too late you can check the troubleshooting page in the sidebar but there's no guarantee it will work. If your save breaks I have no way of helping you.")
 st.markdown("---")
 uploaded_file = st.file_uploader(
     "Upload your CompleteSave file:",
@@ -364,8 +165,6 @@ if st.session_state.json_data:
         help="Checking this will unlock all known trucks in the game. If unchecked, no changes will be made to your available trucks. Aramatsu Bowhead added."
     )
 
-
-
     # --- Remove Rusty Trucks Checkbox ---
     remove_rusty_trucks = st.checkbox(
         "Remove Rusty Trucks from Garage",
@@ -471,7 +270,7 @@ if st.session_state.json_data:
                     ssl_value_to_modify['recoveryCoins'][map_name] = recovery_coins_value
 
 
-             # --- Apply Unlock All Levels change (updated logic) ---
+            # --- Apply Unlock All Levels change (updated logic) ---
             if unlock_levels: # If checkbox is currently checked
                 ssl_value_to_modify["unlockedLevels"] = ALL_LEVELS_LIST
             # # Only delete if it was initially fully unlocked and now explicitly unchecked
