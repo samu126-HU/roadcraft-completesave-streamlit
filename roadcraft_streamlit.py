@@ -124,6 +124,14 @@ st.set_page_config(layout="centered", page_title="Roadcraft Save Editor", initia
 
 st.title("Roadcraft Save Editor")
 with st.sidebar:
+    # --- Sidebar Navigation Menu ---
+    page = st.sidebar.selectbox(
+        "Navigation",
+        ["Save Editor", "Troubleshooting Guide"]
+    )
+
+    if page == "Troubleshooting Guide":
+        st.switch_page("pages/troubleshooting_guide.py")
     st.markdown("This app is **unofficial, unsupported,** and if your save breaks I have no way of helping you. ***ALWAYS BACK UP YOUR SAVES FIRST!***")
     st.markdown("Save files are usually found at:")
     st.markdown("***1. STEAM*** `%AppData%/Local/Saber/RoadCraftGame/storage/steam/user/<YOUR_STEAM_USER_ID>/Main/save`")
@@ -134,16 +142,6 @@ with st.sidebar:
     st.markdown("Thanks to cgpavlakos for his [fork](https://github.com/cgpavlakos/roadcraft-completesave-streamlit) of NakedDevA's [Roadcraft completesave editor](https://github.com/NakedDevA/roadcraft-completesave) (the original save editor author).")
     st.markdown("This app is a version of that editor, with some additional features.")
     st.markdown("---")
-
-
-# --- Sidebar Navigation Menu ---
-page = st.sidebar.selectbox(
-    "Navigation",
-    ["Save Editor", "Troubleshooting Guide"]
-)
-
-if page == "Troubleshooting Guide":
-    st.switch_page("pages/troubleshooting_guide.py")
 
 # Initialize session state variables if they don't exist
 if 'json_data' not in st.session_state:
