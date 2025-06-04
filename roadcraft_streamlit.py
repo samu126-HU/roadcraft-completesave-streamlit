@@ -464,6 +464,29 @@ if st.session_state.json_data:
         help="Checking this will unlock all known trucks in the game. If unchecked, no changes will be made to your available trucks. Aramatsu Bowhead added."
     )
 
+    # --- Per-Truck Unlock Dropdown ---
+    st.markdown("**Select Unlocked Trucks:**")
+    current_unlocked_trucks = st.session_state.json_data.get('SslValue', {}).get('newUnlockedTrucks', [])
+    # Deduplicate trucks while preserving order
+    seen_trucks = set()
+    unique_trucks = []
+    for truck in ALL_TRUCKS_LIST:
+        if truck not in seen_trucks:
+            unique_trucks.append(truck)
+            seen_trucks.add(truck)
+    # Filter current_unlocked_trucks to only those present in unique_trucks to avoid Streamlit errors
+    filtered_unlocked_trucks = [truck for truck in current_unlocked_trucks if truck in unique_trucks]
+    # Multi-select dropdown for unlocked trucks
+    selected_trucks = st.multiselect(
+        "Unlocked Trucks",
+        options=unique_trucks,
+        default=filtered_unlocked_trucks,
+        key="unlocked_trucks_multiselect",
+        help="Select which trucks should be unlocked."
+    )
+    # For compatibility with the rest of the code, create a dict of truck:bool
+    truck_checkbox_states = {truck: (truck in selected_trucks) for truck in unique_trucks}
+
     # --- Remove Rusty Trucks Checkbox ---
     remove_rusty_trucks = st.checkbox(
         "Remove Rusty Trucks from Garage",
@@ -562,7 +585,13 @@ if st.session_state.json_data:
             if unlock_trucks: # If checkbox is currently checked
                 ssl_value_to_modify["newUnlockedTrucks"] = ALL_TRUCKS_LIST
                 ssl_value_to_modify['lockedTrucks'] = [] # Set it to an empty list
-            
+            else:
+                # Use the per-truck checkboxes to determine which trucks to unlock
+                selected_trucks = [truck for truck, checked in truck_checkbox_states.items() if checked]
+                ssl_value_to_modify["newUnlockedTrucks"] = selected_trucks
+                # Optionally, update lockedTrucks as well
+                ssl_value_to_modify['lockedTrucks'] = [truck for truck in ALL_TRUCKS_LIST if truck not in selected_trucks]
+
             # --- Apply Remove Rusty Trucks change ---
             if remove_rusty_trucks:
                 if 'storedTrucks' in ssl_value_to_modify:
